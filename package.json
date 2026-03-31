@@ -1,6 +1,6 @@
 {
   "name": "@wxhccc/canvas-roi",
-  "version": "2.1.0",
+  "version": "2.3.1",
   "description": "",
   "main": "dist/index.cjs.js",
   "module": "dist/index.js",
@@ -47,9 +47,9 @@
     "prettier": "2.2.1",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "rollup": "^2.41.4",
+    "rollup": "^2.80.0",
     "rollup-plugin-terser": "^5.1.3",
-    "rollup-plugin-typescript2": "^0.30.0",
+    "rollup-plugin-typescript2": "^0.36.0",
     "typescript": "^4.2.3",
     "vue": "^3.0.7"
   },
@@ -58,7 +58,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:wxhccc/canvas-roi.git"
+    "url": "git@github.com:wxhccche/canvas-roi.git"
   },
   "author": "wxhccc",
   "license": "MIT",

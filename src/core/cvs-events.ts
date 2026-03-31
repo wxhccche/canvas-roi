@@ -6,7 +6,7 @@ import {
   checkPointsEqual,
   getVirtualRectPoints,
   countDistance,
-  fixRectPoints,
+  fixRectPoints
 } from './utils'
 
 function keyPress(this: CanvasRoi, e: KeyboardEvent): void {
@@ -86,9 +86,9 @@ function polygonAddPoint(
   lineIndex: number
 ) {
   points.splice(lineIndex + 1, 0, point)
-  Object.assign(this.operateCursor, {
+  Object.assign(this.operateCursor as OperateCursor, {
     pointIndex: lineIndex + 1,
-    lineIndex: -1,
+    lineIndex: -1
   })
 }
 
@@ -99,7 +99,7 @@ function modifyChosePath(this: CanvasRoi, e: MouseEvent) {
     pathIndex = -1,
     pointIndex = -1,
     lineIndex,
-    inPath,
+    inPath
   } = this.operateCursor || {}
   if (!this.paths[pathIndex]) return
   const { type, points } = this.paths[pathIndex]
@@ -140,12 +140,44 @@ function modifyChosePath(this: CanvasRoi, e: MouseEvent) {
     return
   }
 
-  if (lineIndex && lineIndex >= 0) {
-    isRect
-      ? lineIndex % 3 === 0
-        ? pointMove(points[0], lineIndex === 0, lineIndex === 3)
-        : pointMove(points[1], lineIndex === 2, lineIndex === 1)
-      : polygonAddPoint.call(this, points, newPoint, lineIndex)
+  if (lineIndex !== undefined && lineIndex >= 0) {
+    if (isRect) {
+      // 移动边
+      const ratio = this.$opts.rectAspectRatio
+      if (lineIndex % 3 === 0) {
+        pointMove(points[0], lineIndex === 0, lineIndex === 3)
+      } else {
+        pointMove(points[1], lineIndex === 2, lineIndex === 1)
+      }
+      if (ratio > 0) {
+        const p0 = points[0],
+          p1 = points[1]
+        const dx = p1.x - p0.x,
+          dy = p1.y - p0.y
+        // 防止除零，保留方向符号
+        const signX = dx === 0 ? 1 : dx > 0 ? 1 : -1
+        const signY = dy === 0 ? 1 : dy > 0 ? 1 : -1
+
+        if (lineIndex === 0 || lineIndex === 2) {
+          // 上下边：固定左边，调整右边
+          const absHeight = Math.abs(dy)
+          const absWidth = absHeight / ratio
+          p1.x = p0.x + signX * absWidth
+        } else {
+          // 左右边：固定上边，调整下边
+          const absWidth = Math.abs(dx)
+          const absHeight = absWidth * ratio
+          p1.y = p0.y + signY * absHeight
+        }
+      }
+    } else {
+      polygonAddPoint.call(this, points, newPoint, lineIndex)
+    }
+    // isRect
+    //   ? lineIndex % 3 === 0
+    //     ? pointMove(points[0], lineIndex === 0, lineIndex === 3)
+    //     : pointMove(points[1], lineIndex === 2, lineIndex === 1)
+    //   : polygonAddPoint.call(this, points, newPoint, lineIndex)
     this._drawRoiPathsWithOpe(isRect ? undefined : newPoint)
   }
 }
@@ -160,7 +192,9 @@ function checkPointLocalInPath(
   const {
     canvasScale,
     sensitive: { point },
+    rectAspectRatio
   } = this.$opts
+  const isRatio = rectAspectRatio > 0
   for (let i = 0; i < length; i += 1) {
     const start = points[i]
     const end = points[(i + 1) % length]
@@ -170,7 +204,7 @@ function checkPointLocalInPath(
       : checkPointsNearly.call(this, end, ckPoint, pointSen)
       ? i + 1
       : -1
-    if (nearCorer > -1) {
+    if (!isRatio && nearCorer > -1) {
       return { pointIndex: nearCorer }
     }
     this.$ctx.beginPath()
@@ -196,7 +230,7 @@ function getMousePosition(
   const {
     canvasScale,
     sensitive: { line },
-    pathCanMove,
+    pathCanMove
   } = this.$opts
   this.$ctx.save()
   this.$ctx.lineWidth = line * canvasScale
@@ -233,7 +267,7 @@ function checkMouseCanOperate(this: CanvasRoi, e?: MouseEvent): void {
   const {
     paths,
     choseIndex,
-    $opts: { operateFocusOnly },
+    $opts: { operateFocusOnly }
   } = this
   if (operateFocusOnly) {
     if (paths[choseIndex]) {
@@ -257,7 +291,7 @@ function checkMouseCanOperate(this: CanvasRoi, e?: MouseEvent): void {
       lineIndex,
       pointIndex,
       inPath,
-      pathIndex,
+      pathIndex
     } = this.operateCursor
     if (!inPath && pathType === 'rect') {
       const { side, corner } = this.$opts.rectCursors
@@ -471,5 +505,5 @@ export default {
   cvsMouseDown,
   cvsMouseMove,
   cvsMouseClick,
-  checkMouseCanOperate,
+  checkMouseCanOperate
 }
