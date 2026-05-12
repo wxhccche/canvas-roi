@@ -34,7 +34,9 @@ export function defaultOptions(): RoiOptions {
       corner: ['nw-resize', 'ne-resize', 'se-resize', 'sw-resize']
     },
     maxPath: 0,
-    initChoseIndex: -1,
-    autoFit: false
+    autoFit: false,
+    reverse: true,
+    rectFullPoint: false,
+    bounded: false
   }
 }
