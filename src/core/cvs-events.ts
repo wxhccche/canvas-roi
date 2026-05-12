@@ -173,11 +173,6 @@ function modifyChosePath(this: CanvasRoi, e: MouseEvent) {
     } else {
       polygonAddPoint.call(this, points, newPoint, lineIndex)
     }
-    // isRect
-    //   ? lineIndex % 3 === 0
-    //     ? pointMove(points[0], lineIndex === 0, lineIndex === 3)
-    //     : pointMove(points[1], lineIndex === 2, lineIndex === 1)
-    //   : polygonAddPoint.call(this, points, newPoint, lineIndex)
     this._drawRoiPathsWithOpe(isRect ? undefined : newPoint)
   }
 }
