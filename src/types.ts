@@ -140,6 +140,8 @@ export interface RoiOptions {
   rectFullPoint: boolean
   /** 选区移动时是否需要限制在可视区域内 */
   bounded: boolean
+  /** 自定义限制边界（4 个点，顺时针/逆时针均可，逻辑坐标） */
+  boundary?: Point[]
   /** 组件初始化完成时出发 */
   onReady?: CustomHanlder
   /** 绑定选区数据发生变化时触发 */

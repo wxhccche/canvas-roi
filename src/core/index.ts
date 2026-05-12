@@ -10,7 +10,8 @@ import {
   fixRectPoints,
   bindMethods,
   countDistance,
-  getVirtualRectPoints
+  getVirtualRectPoints,
+  clampPointToPolygon
 } from './utils'
 import { defaultOptions } from './options'
 import cvsEventHandlers from './cvs-events'
@@ -143,6 +144,29 @@ export default class CanvasRoi {
       this._scaleChangeWatcher.bind(this)
     )
   }
+  /**
+   * 将坐标限制到边界内（含默认矩形/自定义菱形）
+   */
+  _clampPointToBoundary(point: Point): Point {
+    if (!this.$opts.bounded) return point
+
+    let polygon: Point[]
+    if (this.$opts.boundary) {
+      // boundary 存储比例坐标，使用 invert(..., false) 转为物理像素坐标
+      polygon = this.$opts.boundary.map((p) => this.invert(p))
+    } else {
+      // 默认矩形边界：直接使用画布物理像素尺寸 ($cvsSize)
+      const w = this.$cvsSize.width
+      const h = this.$cvsSize.height
+      polygon = [
+        { x: 0, y: 0 },
+        { x: w, y: 0 },
+        { x: w, y: h },
+        { x: 0, y: h }
+      ]
+    }
+    return clampPointToPolygon(point, polygon)
+  }
 
   _sizeChangeWatcher(): void {
     if (!this.$cvs) {
@@ -155,7 +179,6 @@ export default class CanvasRoi {
     }, 50)
   }
   _scaleChangeWatcher() {
-    console.log(123123123131)
     if (!this.$cvs) {
       return
     }
@@ -185,7 +208,7 @@ export default class CanvasRoi {
         this.$opts[key]
       ) {
         Object.assign(this.$opts[key], options[key])
-      } else if (typeof item !== 'undefined') {
+      } else {
         this.$opts[key] = item as RoiOptions[K]
       }
     })

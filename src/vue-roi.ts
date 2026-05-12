@@ -57,7 +57,7 @@ const optionProps = () => ({
     default: undefined
   },
   digits: Number,
-  distanceCheck: Number,
+  distanceCheck: [Number, Function] as PropType<RoiOptions['distanceCheck']>,
   tinyRectSize: Number,
   rectAspectRatio: Number,
   tinyCircleRadius: Number,
@@ -143,7 +143,14 @@ const CanvasRoiComponent = defineComponent({
   computed: {
     handledOptions(): ParitalRoiOptions {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { options, modelValue, choseIndex, ...propOptions } = this.$props
+      const { options, modelValue, choseIndex, ...rest } = this.$props
+      // 只选取显式传入的 props（即值不为 undefined 的属性）
+      const propOptions: any = {}
+      Object.entries(rest).forEach(([key, value]) => {
+        if (value !== undefined) {
+          propOptions[key] = value
+        }
+      })
       return { ...propOptions, ...options, ...this.handledEvents }
     }
   },

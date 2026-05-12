@@ -53,3 +53,55 @@ export function bindMethods(this: any, methods: MethodsMap): void {
     this[`_${key}`] = methods[key].bind(this)
   }
 }
+
+/**
+ * 判断点是否在多边形内部（射线法）
+ */
+export function pointInPolygon(point: Point, polygon: Point[]): boolean {
+  let inside = false
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].x,
+      yi = polygon[i].y
+    const xj = polygon[j].x,
+      yj = polygon[j].y
+    if (
+      yi > point.y !== yj > point.y &&
+      point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi
+    ) {
+      inside = !inside
+    }
+  }
+  return inside
+}
+
+/**
+ * 计算点到线段最近点
+ */
+function closestPointOnSegment(p: Point, a: Point, b: Point): Point {
+  const dx = b.x - a.x,
+    dy = b.y - a.y
+  const t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy || 1)
+  const tClamped = Math.max(0, Math.min(1, t))
+  return { x: a.x + tClamped * dx, y: a.y + tClamped * dy }
+}
+
+/**
+ * 将点限制到凸多边形内部（最近边界点策略）
+ */
+export function clampPointToPolygon(point: Point, polygon: Point[]): Point {
+  if (pointInPolygon(point, polygon)) return point
+
+  let minDist = Infinity
+  let closest: Point = point
+  for (let i = 0; i < polygon.length; i++) {
+    const a = polygon[i]
+    const b = polygon[(i + 1) % polygon.length]
+    const cp = closestPointOnSegment(point, a, b)
+    const dist = (cp.x - point.x) ** 2 + (cp.y - point.y) ** 2
+    if (dist < minDist) {
+      minDist = dist
+      closest = cp
+    }
+  }
+  return closest
+}
