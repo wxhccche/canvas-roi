@@ -65,6 +65,24 @@ function getCircleEndPoint(
   }
 }
 
+/**
+ * 检查矩形是否超出边界（支持默认矩形和自定义菱形）
+ */
+function isRectOutBounded(
+  this: CanvasRoi,
+  startPoint: Point,
+  endPoint: Point
+): boolean {
+  if (!this.$opts.bounded) return false
+  const testPoints = getVirtualRectPoints([startPoint, endPoint])
+  if (this.$opts.boundary?.length === 4) {
+    const boundaryPx = this.$opts.boundary.map((p) => this.invert(p, false))
+    return !testPoints.every((p) => pointInPolygon(p, boundaryPx))
+  }
+  const { width: w, height: h } = this.$cvsSize
+  return !testPoints.every((p) => p.x >= 0 && p.x <= w && p.y >= 0 && p.y <= h)
+}
+
 function dragDrawingHandle(this: CanvasRoi, e: MouseEvent) {
   const { type, points } = this.newPath
   if (!this.dragging) {
@@ -78,10 +96,15 @@ function dragDrawingHandle(this: CanvasRoi, e: MouseEvent) {
     return
   }
 
-  const point = this._clampPointToBoundary(rawPoint)
-  this._drawRoiPaths(
-    type === 'rect' ? getRectEndPoint.call(this, point) : point
-  )
+  // 矩形：先应用宽高比，再检查边界
+  let endPoint = rawPoint
+  if (type === 'rect') {
+    endPoint = getRectEndPoint.call(this, rawPoint)
+    if (isRectOutBounded.call(this, points[0], endPoint)) return // 越界则阻挡
+  } else {
+    endPoint = this._clampPointToBoundary(rawPoint)
+  }
+  this._drawRoiPaths(endPoint)
 }
 
 function checkPointsNearly(
@@ -153,7 +176,7 @@ function modifyChosePath(this: CanvasRoi, e: MouseEvent) {
   const { bounded } = this.$opts
   const hasCustomBoundary = !!(bounded && this.$opts.boundary?.length === 4)
 
-  // 默认边界轴向检测（仅无自定义边界时使用）
+  // 默认边界轴向检测
   let xOut = false,
     yOut = false
   if (bounded && !hasCustomBoundary) {
@@ -190,7 +213,6 @@ function modifyChosePath(this: CanvasRoi, e: MouseEvent) {
         y: end.y + rawDistance[1]
       }
       if (bounded) {
-        // 检查平移后圆心到边界的最大允许半径是否仍 >= 当前半径
         const currentR = countDistance(center, end)
         const { x: scx, y: scy } = shiftedCenter
         const { width: w, height: h } = this.$cvsSize
@@ -258,6 +280,10 @@ function modifyChosePath(this: CanvasRoi, e: MouseEvent) {
   if (lineIndex !== undefined && lineIndex >= 0) {
     if (isRect) {
       const ratio = this.$opts.rectAspectRatio
+      // 备份原始坐标，用于越界回退
+      const origP0 = { ...points[0] }
+      const origP1 = { ...points[1] }
+
       if (lineIndex % 3 === 0) {
         pointMove(points[0], lineIndex === 0, lineIndex === 3)
       } else {
@@ -268,21 +294,29 @@ function modifyChosePath(this: CanvasRoi, e: MouseEvent) {
           p1 = points[1]
         const dx = p1.x - p0.x,
           dy = p1.y - p0.y
-        // 防止除零，保留方向符号
         const signX = dx === 0 ? 1 : dx > 0 ? 1 : -1
         const signY = dy === 0 ? 1 : dy > 0 ? 1 : -1
         if (lineIndex === 0 || lineIndex === 2) {
-          // 上下边：固定左边，调整右边
           const absHeight = Math.abs(dy)
           const absWidth = absHeight / ratio
           p1.x = p0.x + signX * absWidth
         } else {
-          // 左右边：固定上边，调整下边
           const absWidth = Math.abs(dx)
           const absHeight = absWidth * ratio
           p1.y = p0.y + signY * absHeight
         }
       }
+
+      // 越界回退
+      if (isRectOutBounded.call(this, points[0], points[1])) {
+        points[0].x = origP0.x
+        points[0].y = origP0.y
+        points[1].x = origP1.x
+        points[1].y = origP1.y
+        this._drawRoiPaths()
+        return
+      }
+
       if (hasCustomBoundary) {
         points[0] = this._clampPointToBoundary(points[0])
         points[1] = this._clampPointToBoundary(points[1])
@@ -593,11 +627,14 @@ function cvsMouseUp(this: CanvasRoi, e: MouseEvent): void {
         this.newPath.points[0],
         rawEndPoint
       )
+    } else if (this.newPath.type === 'rect') {
+      endPoint = getRectEndPoint.call(this, rawEndPoint)
+      if (isRectOutBounded.call(this, this.newPath.points[0], endPoint)) {
+        this._resetNewPath()
+        return
+      }
     } else {
       endPoint = this._clampPointToBoundary(rawEndPoint)
-      if (this.newPath.type === 'rect') {
-        endPoint = getRectEndPoint.call(this, endPoint)
-      }
     }
     checkRoiValid.call(this, this.newPath.points[0], endPoint)
       ? addDragPath.call(this, endPoint)
